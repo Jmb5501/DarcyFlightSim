@@ -12,7 +12,7 @@
 clear
 clc
 close all
-
+tic
 % Import data from sim_setup script
 [vehicle,engine,chute,aero_deck,sim,env,IC] = simSetup();
 
@@ -64,111 +64,15 @@ if strcmp(sim.method,'single')
     
     if sim.dofs == 1
         flight_data = traj_1dof(Scenarios,aero_deck);
-
-        % Post Processing
-        mask = [true;flight_data(2:end,1) ~= 0];
-        flight_data = flight_data(mask,:);
-        disp(['Main chute descent rate:  ' num2str(flight_data(end,2)*3.2804) ' ft/s']);
-    
-        % Plotting
-        time = 0:sim.dt:(length(flight_data)-1)*sim.dt;
-        subplot(3,3,1)
-        plot(time,flight_data(:,1)*3.281) % convert m to ft
-        grid
-        xlabel('Time (s)')
-        ylabel('Position (ft)')
-        subplot(3,3,2)
-        plot(time,flight_data(:,2)*3.281) % convert m/s to ft/s
-        grid
-        xlabel('Time (s)')
-        ylabel('Velocity (ft/s)')
-        subplot(3,3,3)
-        plot(time,flight_data(:,4))
-        grid
-        xlabel('Time (s)')
-        ylabel('Mach')
-        subplot(3,3,4)
-        plot(time,flight_data(:,5)/4.448) % convert N to lbf
-        grid
-        xlabel('Time (s)')
-        ylabel('Aerodynamic Drag (lbf)')
-        subplot(3,3,5)
-        plot(time,flight_data(:,6)/4.448) % convert N to lbf
-        grid
-        xlabel('Time (s)')
-        ylabel('Thrust (lbf)')
-        subplot(3,3,6)
-        plot(time,flight_data(:,3)*2.205) % convert kg to lb
-        grid
-        xlabel('Time (s)')
-        ylabel('Mass (lb)')
-        subplot(3,3,7)
-        plot(time(1:end-1),(diff(flight_data(:,2))./diff(time))/9.81) % convert m/s^2 to g's
-        grid
-        xlabel('Time (s)')
-        ylabel('Acceleration (g)')
-
     elseif sim.dofs == 3
         flight_data = traj_3dof(Scenarios,aero_deck);
-
-        % Post Processing
-        mask = any([true*ones(1,3);flight_data(2:end,4:6) ~= 0],2);
-        flight_data = flight_data(mask,:);
-        disp(['Main chute descent rate:  ' num2str(flight_data(end,6)*3.2804) ' ft/s']);
-    
-        % Plotting
-        time = 0:sim.dt:(length(flight_data(:,1))-1)*sim.dt;
-        subplot(3,3,1)
-        plot(time,flight_data(:,3)*3.281) % convert m to ft
-        grid
-        xlabel('Time (s)')
-        ylabel('Position (ft)')
-        subplot(3,3,2)
-        vel_mags = (flight_data(:,4).^2+flight_data(:,5).^2+flight_data(:,6).^2).^(1/2);
-        plot(time,vel_mags*3.281) % convert m/s to ft/s
-        grid
-        xlabel('Time (s)')
-        ylabel('Velocity (ft/s)')
-        subplot(3,3,3)
-        plot(time,flight_data(:,8))
-        grid
-        xlabel('Time (s)')
-        ylabel('Mach')
-        subplot(3,3,4)
-        plot(time,flight_data(:,9)/4.448) % convert N to lbf
-        grid
-        xlabel('Time (s)')
-        ylabel('Aerodynamic Drag (lbf)')
-        subplot(3,3,5)
-        plot(time,flight_data(:,10)/4.448) % convert N to lbf
-        grid
-        xlabel('Time (s)')
-        ylabel('Thrust (lbf)')
-        subplot(3,3,6)
-        plot(time,flight_data(:,7)*2.205) % convert kg to lb
-        grid
-        xlabel('Time (s)')
-        ylabel('Mass (lb)')
-        subplot(3,3,7)
-        plot(time(1:end-1),(diff(vel_mags)./diff(time))/9.81) % convert m/s^2 to g's
-        grid
-        xlabel('Time (s)')
-        ylabel('Acceleration (g)')
-        
-        % trajectory plot
-        figure
-        plot3(flight_data(:,1)*3.281,flight_data(:,2)*3.281,flight_data(:,3)*3.281) % convert m to ft
-        grid
-        xlabel('X Position(ft)')
-        ylabel('Y Position(ft)')
-        zlabel('Z Position(ft)')
-
     elseif sim.dofs == 6
         flight_data = traj_6dof(Scenarios,aero_deck);
     else
         error('Input for sim.dofs is invalid, check sim_setup for a valid DOF entry! Exiting program...')
     end
-    
+    flightProfilePlot(flight_data,sim.dofs,sim.dt)
+    stabilityPlot(flight_data,sim.dofs,sim.dt,Scenarios.cgWet_x,Scenarios.cgDry_x,aero_deck,Scenarios.diameter)
 
 %% Monte Carlo
 elseif strcmp(sim.method,'mc')
@@ -208,6 +112,9 @@ elseif strcmp(sim.method,'mc')
         
         if sim.dofs == 1
             flight_data = traj_1dof(Scenarios(i),aero_deck);
+
+            % Post Processing
+
         elseif sim.dofs == 3
             flight_data = traj_3dof(Scenarios(i),aero_deck);
         elseif sim.dofs == 6
@@ -228,3 +135,4 @@ elseif contains(sim.method,'sweep')
 else
     error('Input for sim.method is not valid, check sim_setup for a valid method entry! Exiting program...')
 end
+toc

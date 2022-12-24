@@ -1,14 +1,14 @@
 %%%%% 3DOF Trajectory Model for Darcy II%%%%%
-% Purpose: 3DOF (3D position) simulator for YJSP-XL vehicles
+% Purpose: 6DOF (3D position and rotations) simulator for YJSP-XL vehicles
 % Key Features:
-%   1) Model includes gravity, thrust, reco, and aerodynamic force in axial direction.
+%   1) Model includes gravity, thrust, reco, and aerodynamics
 %   2) Integrator is built-in RK4
-%   3) Capable of modeling effects due to launch rail angle and wind.
+%   3) Capable of modeling effects due to launch rail angle, engine cant, and wind
 % Original Author: John Beavers
 % Last Modified: John Beavers
 % Date Updated: 10/24/22
 
-function flight_data = traj_3dof(Scenario,aero_deck)
+function flight_data = traj_6dof(Scenario,aero_deck)
 
 %% Unpack Scenario Structure (only what is needed for 3DOF simulation)
 drymass = Scenario.drymass;
@@ -121,7 +121,7 @@ end
 %%% HELPER FUNCTIONS %%%
 
 %% RK4 Integrator
-% Purpose: RK4 integrator for simulation of a rocket (NED frame)
+% Purpose: RK4 integrator for simulation of a rocket (body frame)
 function [x_next] = RK4(dt,x,diameter,mdot,thrust,main_CD,main_A,drogue_CD,drogue_A,main_deploy,env,alt_0,rail_angle,apogee_flag,aero_deck)
     y1 = x;
     k1 = rocketdyn_3dof(y1,diameter,mdot,thrust,main_CD,main_A,drogue_CD,drogue_A,main_deploy,env,alt_0,rail_angle,apogee_flag,aero_deck);
@@ -219,7 +219,7 @@ function [dxdt] = rocketdyn_3dof(x,diameter,mdot,thrust,main_CD,main_A,drogue_CD
         W = [0,0,env.g*mass*(env.Re/(-pos_z+env.Re))^2];
     end
 
-    % State Derivative - NED Frame
+    
     dxdt = zeros(size(x));
     dxdt(1) = vel_x;
     dxdt(2) = vel_y;

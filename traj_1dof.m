@@ -36,7 +36,7 @@ main_deploy_flag = 0;
 meco_flag = 0;
 tspan = 0:dt:tf;
 
-%% Propulsion Definitions
+% %% Propulsion Definitions
 mdot_curve = zeros(length(tspan),1);
 thrust_curve = zeros(length(tspan),1);
 mdot_curve(1:length(mdot)) = mdot;
@@ -70,6 +70,11 @@ for i = 1:length(tspan)
     D_aero = 1/2*rho*abs(x_next(2))^2*area*CD;
     flight_data(i,4:6) = [mach,D_aero,thrust_curve(i)];
 
+    % logic for setting current mass to drymass if thrust = 0
+    if thrust_curve(i) == 0
+        flight_data(i,3) = drymass;
+    end
+
     % logic for displaying when MECO is hit
     if thrust_curve(i) == 0 && ~meco_flag
         meco_flag = 1;
@@ -77,9 +82,12 @@ for i = 1:length(tspan)
     end
     
     % logic for displaying when drogue chute has been deployed in console
-    if i>1 && flight_data(i,2) <= 0 && ~apogee_flag
+    if i>1 && flight_data(i,2) <= 0 && ~apogee_flag && flag == 2
         apogee_flag = 1;
+        disp(['Apogee at ' num2str(flight_data(i,1)*3.2804) ' ft']);
         disp(['Drogue chute delpoyed at ' num2str(flight_data(i,1)*3.2804) ' ft']);
+    elseif i>1 && flight_data(i,2) <= 0 && ~apogee_flag && flag == 1
+        apogee_flag = 1;
     end
     
     % logic for displaying when main chute has been deployed in console
@@ -92,15 +100,21 @@ for i = 1:length(tspan)
     
     % logic for checking if rocket has hit ground
     if i>1 && flight_data(i,1) <= 0
+        mask = [true;flight_data(2:end,1) ~= 0];
+        flight_data = flight_data(mask,:);
+        disp(['Main chute descent rate:  ' num2str(flight_data(end,2)*3.2804) ' ft/s']);
         break
     end    
 
     % logic for ending sim when apogee is found
     if flag ==1  && apogee_flag
+        mask = [true;flight_data(2:end,1) ~= 0];
+        flight_data = flight_data(mask,:);
+        disp(['Apogee at ' num2str(flight_data(end,1)*3.2804) ' ft']);
         break   
-    else
-        continue
     end
+
+    
 end
 
 

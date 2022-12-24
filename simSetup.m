@@ -14,13 +14,13 @@ function [vehicle,engine,chute,aero_deck,sim,env,IC] = simSetup()
 
 %% Vehicle Parmeters
 % PARAMETERS WITH DISTRIBUTIONS (used for Monte Carlo dispersion analysis)
+% ***If not doing Monte Carlo analysis, just input nominal values
 % Note: nom = nominal, upper = upper bound, lower = lower bound
-vehicle.drymass.nom = 11.3398; % wet mass [kg]
-    vehicle.wetmass.upper =  110.327;
-    vehicle.wetmass.lower = 104.945;
+
+vehicle.drymass.nom = 14.474133; % dry mass [kg]
 
 % Wet Centers of Gravity (x,y,z) measured from nosecone tip [m]
-vehicle.cgWet_x.nom = -3.5517;
+vehicle.cgWet_x.nom = 2.0958302;
     vehicle.cgWet_x.upper = -3.4;
     vehicle.cgWet_x.lower = -3.6;
 vehicle.cgWet_y.nom = 0.0009;
@@ -31,7 +31,7 @@ vehicle.cgWet_z.nom = -0.006;
     vehicle.cgWet_z.lower = -0.004;
 
 % Dry Centers of Gravity (x,y,z) measured from nosecone tip [m]
-vehicle.cgDry_x.nom = -3.482;
+vehicle.cgDry_x.nom = 1.953514;
     vehicle.cgDry_x.upper = -3.4;
     vehicle.cgDry_x.lower = -3.6;
 vehicle.cgDry_y.nom = 0.0011;
@@ -88,14 +88,27 @@ vehicle.length = 3.048;% length [m]
 %% Engine Model
 % runs the engine simulator to generate thrust curve and propellant masses
 % cant - engine cant angle [deg] (1st index is angle w.r.t body x axis, 2nd index is w.r.t y axis)
+% mode - 1 for generating the thrust curve by running the engine sim, 2
+% for a pre-loaded in thrust curve (check to make sure the dt is the same
+% for both sims on your own)
 
-engine_params = engineSetup(); 
+% Create thrust model from runEngineSime (uncomment the code below)
+% engine_params = engineSetup(); 
+% 
+% % Code currently copied from manualOptimizer.m
+% engine_params.CDA_f =  0.3*0.00000672*1.5; 
+% engine_params.CDA_o = 0.25*0.00002462*1.77;
+% 
+% [engine, ~, ~, ~, ~] = runEngineSim(engine_params, false);
 
-% Code currently copied from manualOptimizer.m
-engine_params.CDA_f =  0.3*0.00000672*1.5; 
-engine_params.CDA_o = 0.25*0.00002462*1.77;
-
-[engine, ~, ~, ~, ~] = runEngineSim(engine_params, false);
+% Create thrust model from preprocessed thrust data (uncomment code below)
+engine = load("C45Data.mat");
+engine = engine.data;
+engine.m_N2O = real(engine.m_N2O);
+engine.m_f = real(engine.m_f);
+engine.m_dot = real(engine.m_dot);
+engine.thrust = real(engine.thrust);
+engine.mode = 2;
 
 %% Parachute Model
 % main_mass - mass of main chute [kg]
@@ -107,17 +120,17 @@ engine_params.CDA_o = 0.25*0.00002462*1.77;
 % drogue_A - area of drogue chute [m^2]
 % DROGUE CHUTE IS HARDCODED IN TO DEPLOY AT APOGEE
 
-chute.main_mass = 0.380;
+chute.main_mass = 0.539;
 chute.main_CD = 2.2;
-chute.main_A = 2.6263689; % 72" chute
-chute.main_deploy = 1000 / 3.281;
+chute.main_A = 3.5656187; % 84" chute
+chute.main_deploy = 3000 / 3.281;
 chute.drogue_mass = 0.062;
 chute.drogue_CD = 1.5;
 chute.drogue_A = 0.29171555; % 24" elliptical drogue
 
 %% Aero Deck 
 % specify the aero deck to be used
-aero_deck = readtable('Darcy2_Aero.csv',"FileType",'spreadsheet'); 
+aero_deck = readtable('Darcy2_NewAero.csv',"FileType",'spreadsheet'); 
 
 %% Simulation Parameters
 % dofs - specify what DOF mode to run the sim in (1,3,6)
@@ -131,12 +144,13 @@ aero_deck = readtable('Darcy2_Aero.csv',"FileType",'spreadsheet');
 sim.dofs = 1;
 sim.trials = 1;
 sim.method = 'single';
-sim.dt = .1; % MAKE SURE THIS dt AND THE ENGINE SIM dt ARE EQUAL (check getParams.m for engine dt)
+sim.dt = .007; % MAKE SURE THIS dt AND THE ENGINE SIM dt ARE EQUAL (check getParams.m for engine dt)
 sim.tspan = 1000;
-sim.flag = 2;
+sim.flag = 1;
 sim.integrator= 1;
 
-if sim.dt ~= engine_params.timestep
+if engine.mode == 2 
+elseif engine.mode == 1 && sim.dt ~= engine_params.timestep
     error('Flight Sim dt and Engine Sim dt must be equal! Exiting program...')
 end
 %% Environmental Parameters
@@ -161,7 +175,7 @@ env.g= 9.81;
 % rail_length - length of launch rail [m]
 
 
-IC.LLA = [30.933678; -81.518268; 3]; 
+IC.LLA = [30.933678; -81.518268; 630]; 
 IC.pos = [0;0;0];
 IC.vel = [0;0;0];
 IC.roll = 0;
