@@ -84,6 +84,10 @@ end
 
 %% Storing data and outputting
 
+%set end fuel and oxidizer mass to 0
+m_N2O(end) = 0;
+m_f(end) = 0;
+
 data.t = t; 
 data.m_N2O = m_N2O; 
 data.m_f = m_f;
